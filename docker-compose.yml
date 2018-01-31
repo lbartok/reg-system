@@ -1,0 +1,11 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+     - "80:80"
+     - "433:433"
+     - "9000:9000"
+    volumes:
+     - .:/app:rw
+
