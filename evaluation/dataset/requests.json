@@ -1,0 +1,15 @@
+[
+  {
+    "name": "get_home",
+    "method": "GET",
+    "path": "/",
+    "expect_contains": "Order ID"
+  },
+  {
+    "name": "post_order",
+    "method": "POST",
+    "path": "/order",
+    "expect_contains": "Order received",
+    "uses_previous": "orderId"
+  }
+]

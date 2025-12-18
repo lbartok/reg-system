@@ -1,11 +1,16 @@
-version: '3'
+version: '3.8'
 services:
-  web:
+  reg-system:
     build: .
+    image: reg-system:latest
+    container_name: reg-system
+    env_file: .env
     ports:
-     - "80:80"
-     - "433:433"
-     - "9000:9000"
-    volumes:
-     - .:/app:rw
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - proxy
 
+networks:
+  proxy:
+    external: false

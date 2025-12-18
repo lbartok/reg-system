@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  reg-system:
+    build: .
+    image: reg-system:test
+    container_name: reg-system-test
+    env_file: .env
+    ports:
+      - "3000:3000"
+    restart: "no"
+
+  eval:
+    image: python:3.10-slim
+    container_name: reg-system-eval
+    depends_on:
+      - reg-system
+    volumes:
+      - ./:/workdir
+    working_dir: /workdir
+    environment:
+      - EVAL_BASE_URL=http://reg-system:3000
+    command: /bin/sh -c "pip install --no-cache-dir -r evaluation/requirements.txt && python evaluation/run_evaluation.py"
+    restart: "no"
+
+networks: {}

@@ -1,0 +1,30 @@
+name: Deploy
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write .env
+        run: echo "$ENV_FILE" > .env
+        env:
+          ENV_FILE: ${{ secrets.PROJECT_ENV }}
+      - name: Deploy containers
+        run: |
+          docker compose pull || true
+          docker compose up -d --build --remove-orphans
+      - name: Ensure proxy host (Node Proxy Manager)
+        if: always()
+        env:
+          NPM_URL: ${{ secrets.NPM_URL }}
+          NPM_USER: ${{ secrets.NPM_USER }}
+          NPM_PASS: ${{ secrets.NPM_PASS }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          TARGET_HOST: ${{ secrets.TARGET_HOST }}
+          TARGET_PORT: ${{ secrets.TARGET_PORT }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq
+          bash scripts/npm-proxy-sync.sh
