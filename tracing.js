@@ -6,20 +6,38 @@
     OTEL_EXPORTER_OTLP_ENDPOINT - OTLP HTTP endpoint (optional)
     OTEL_CONSOLE_EXPORTER - if set to "true", also prints spans to console
 */
-const { NodeSDK } = require('@opentelemetry/sdk-node');
-const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
-const { ConsoleSpanExporter, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
+let NodeSDK, getNodeAutoInstrumentations, OTLPTraceExporter, ConsoleSpanExporter, SimpleSpanProcessor;
+let _otelAvailable = true;
+try {
+  ({ NodeSDK } = require('@opentelemetry/sdk-node'));
+  ({ getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node'));
+  ({ OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http'));
+  ({ ConsoleSpanExporter, SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base'));
+} catch (e) {
+  _otelAvailable = false;
+  console.warn('OpenTelemetry modules not available; tracing disabled:', e.message);
+  // no-op stubs so application can run without OTEL packages
+  NodeSDK = class {
+    constructor() {}
+    start() { return Promise.resolve(); }
+    shutdown() { return Promise.resolve(); }
+    configureTracerProvider() { return { addSpanProcessor() {} }; }
+  };
+  getNodeAutoInstrumentations = () => [];
+  OTLPTraceExporter = null;
+  ConsoleSpanExporter = null;
+  SimpleSpanProcessor = class {};
+}
 
 const serviceName = process.env.OTEL_SERVICE_NAME || 'reg-system';
 const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '';
 const useConsole = (process.env.OTEL_CONSOLE_EXPORTER || 'true') === 'true';
 
 const exporters = [];
-if (otelEndpoint) {
+if (otelEndpoint && OTLPTraceExporter) {
   exporters.push(new OTLPTraceExporter({ url: otelEndpoint }));
 }
-if (useConsole) {
+if (useConsole && ConsoleSpanExporter) {
   exporters.push(new ConsoleSpanExporter());
 }
 
