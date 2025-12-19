@@ -5,9 +5,15 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: [ self-hosted, proxmox-host ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+      - name: Runner info
+        run: |
+          echo "Runner: $(whoami)@$(hostname)"
+          uname -a
+          id
+          docker --version || true
       - name: Write .env
         run: echo "$ENV_FILE" > .env
         env:
@@ -16,6 +22,17 @@ jobs:
         run: |
           docker compose pull || true
           docker compose up -d --build --remove-orphans
+      - name: Wait for local app (healthcheck)
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sS http://localhost:3000/ >/dev/null 2>&1; then
+              echo "app is up"
+              exit 0
+            fi
+            echo "waiting for app... ($i)"
+            sleep 3
+          done
+          echo "app failed to start" && exit 1
       - name: Ensure proxy host (Node Proxy Manager)
         if: always()
         env:
@@ -26,5 +43,8 @@ jobs:
           TARGET_HOST: ${{ secrets.TARGET_HOST }}
           TARGET_PORT: ${{ secrets.TARGET_PORT }}
         run: |
-          sudo apt-get update && sudo apt-get install -y jq
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "jq not found; attempting to install via apt-get"
+            sudo apt-get update && sudo apt-get install -y jq || true
+          fi
           bash scripts/npm-proxy-sync.sh
