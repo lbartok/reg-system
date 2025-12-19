@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "node -r ./tracing.js index.js"
+    "start": "node -r ./tracing.js index.js",
+    "evaluate": "python3 ./evaluation/run_evaluation.py"
   },
   "dependencies": {
     "dotenv": "^16.0.0",
