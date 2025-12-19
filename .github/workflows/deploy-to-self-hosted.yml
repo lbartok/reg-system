@@ -9,7 +9,7 @@ jobs:
     # run this on your self-hosted runner installed on the target server
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Runner info (verify target host)
         run: |
