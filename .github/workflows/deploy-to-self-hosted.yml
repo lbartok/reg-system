@@ -1,0 +1,61 @@
+name: Deploy to self-hosted runner
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    # run this on your self-hosted runner installed on the target server
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Runner info (verify target host)
+        run: |
+          echo "Runner: $(whoami)@$(hostname)"
+          echo "IP addresses:"
+          hostname -I || ip -4 addr show scope global | grep -oE '(?:[0-9]{1,3}\.){3}[0-9]{1,3}' | head -n1 || ipconfig getifaddr en0 || true
+          docker --version || true
+
+      - name: Write .env from secret
+        run: echo "$ENV_FILE" > .env
+        env:
+          ENV_FILE: ${{ secrets.PROJECT_ENV }}
+
+      - name: Deploy containers (docker compose)
+        run: |
+          docker compose pull || true
+          docker compose up -d --build --remove-orphans
+
+      - name: Wait for local app (healthcheck)
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sS http://localhost:3000/ >/dev/null 2>&1; then
+              echo "app is up"
+              exit 0
+            fi
+            echo "waiting for app... ($i)"
+            sleep 3
+          done
+          echo "app failed to start" && exit 1
+
+      - name: Ensure proxy host (Node Proxy Manager)
+        if: always()
+        env:
+          NPM_URL: ${{ secrets.NPM_URL }}
+          NPM_USER: ${{ secrets.NPM_USER }}
+          NPM_PASS: ${{ secrets.NPM_PASS }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          TARGET_HOST: ${{ secrets.TARGET_HOST }}
+          TARGET_PORT: ${{ secrets.TARGET_PORT }}
+        run: |
+          if [ -x scripts/npm-proxy-sync.sh ]; then
+            if ! command -v jq >/dev/null 2>&1; then
+              echo "jq not found; attempting to install via apt-get"
+              sudo apt-get update && sudo apt-get install -y jq || true
+            fi
+            bash scripts/npm-proxy-sync.sh
+          else
+            echo "scripts/npm-proxy-sync.sh not found, skipping proxy sync"
+          fi
