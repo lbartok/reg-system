@@ -23,10 +23,12 @@ jobs:
         env:
           ENV_FILE: ${{ secrets.PROJECT_ENV }}
 
-      - name: Deploy containers (docker compose)
+      - name: Build and deploy containers (docker compose)
         run: |
-          docker compose pull || true
-          docker compose up -d --build --remove-orphans
+          # build images first to ensure latest code is packaged
+          docker compose build --pull --parallel
+          # then bring up the stack
+          docker compose up -d --remove-orphans
 
       - name: Wait for local app (healthcheck)
         run: |

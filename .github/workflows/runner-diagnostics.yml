@@ -1,0 +1,56 @@
+name: Runner diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnostics:
+    # adjust labels if your runner uses custom labels
+    runs-on: self-hosted
+    steps:
+      - name: Run connectivity & TLS diagnostics
+        run: |
+          set -euo pipefail
+          echo "==== Date (UTC) ===="
+          date -u
+
+          echo "\n==== DNS resolution ===="
+          if command -v dig >/dev/null 2>&1; then
+            dig +short api.github.com || true
+          else
+            nslookup api.github.com || true
+          fi
+
+          echo "\n==== /etc/hosts entries for github ===="
+          grep -E 'github|githubusercontent' /etc/hosts || true
+
+          echo "\n==== curl to api.github.com (headers) ===="
+          curl -v --connect-timeout 10 --max-time 20 https://api.github.com/ || true
+
+          echo "\n==== curl to raw.githubusercontent.com ===="
+          curl -v --connect-timeout 10 --max-time 20 https://raw.githubusercontent.com/ || true
+
+          echo "\n==== OpenSSL cert chain for api.github.com ===="
+          if command -v openssl >/dev/null 2>&1; then
+            openssl s_client -showcerts -servername api.github.com -connect api.github.com:443 </dev/null 2>/dev/null | sed -n '1,120p' || true
+          else
+            echo "openssl not installed"
+          fi
+
+          echo "\n==== Proxy environment variables ===="
+          env | grep -i proxy || true
+
+          echo "\n==== System time / NTP ===="
+          date -u || true
+          if command -v timedatectl >/dev/null 2>&1; then
+            timedatectl status || true
+          fi
+
+          echo "\n==== traceroute to api.github.com ===="
+          if command -v traceroute >/dev/null 2>&1; then
+            traceroute -m 15 api.github.com || true
+          else
+            echo "traceroute not installed"
+          fi
+
+          echo "\n==== End diagnostics ===="
