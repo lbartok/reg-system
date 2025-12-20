@@ -24,6 +24,7 @@ jobs:
           echo "Creating target dir: $TARGET_DIR"
           mkdir -p "$TARGET_DIR"
           # copy repository content to target (exclude git metadata "$GITHUB_WORKSPACE/" "$TARGET_DIR/") 
+          echo $GITHUB_WORKSPACE/
           rsync -a --delete --exclude '.git' "$GITHUB_WORKSPACE/" "$TARGET_DIR/"
           # write .env into target dir from secret
           echo "$ENV_FILE" | tee "$TARGET_DIR/.env" >/dev/null
