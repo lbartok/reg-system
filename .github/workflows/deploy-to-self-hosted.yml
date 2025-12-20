@@ -20,6 +20,7 @@ jobs:
 
       - name: Prepare target directory and deploy backend + app
         run: |
+          w
           TARGET_DIR=/srv/projects/reg-system
           echo "Creating target dir: $TARGET_DIR"
           mkdir -p "$TARGET_DIR"
